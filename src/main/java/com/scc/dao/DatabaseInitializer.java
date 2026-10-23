@@ -1,13 +1,19 @@
 package com.scc.dao;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Ensures all required tables exist before the CLI menu starts.
+ * Ensures all required tables exist before the CLI menu starts,
+ * and seeds a default Admin account so someone can approve other users.
  */
 public class DatabaseInitializer {
+
+    // Default Admin credentials (change these if you want)
+    private static final String DEFAULT_ADMIN_USERNAME = "admin";
+    private static final String DEFAULT_ADMIN_PASSWORD = "admin123";
 
     public static void initialize() {
         String users = """
@@ -75,10 +81,25 @@ public class DatabaseInitializer {
             stmt.execute(creditSales);
             stmt.execute(payments);
             stmt.execute(activityLogs);
+
+            seedDefaultAdmin(conn);
+
             System.out.println("Database initialized successfully.");
         } catch (SQLException e) {
             System.out.println("Database initialization failed: " + e.getMessage());
             System.exit(1);
+        }
+    }
+
+    /** Creates the default Admin (already APPROVED) if it doesn't exist yet. */
+    private static void seedDefaultAdmin(Connection conn) throws SQLException {
+        String sql = "INSERT OR IGNORE INTO Users(username, password_hash, role, status) VALUES(?,?,?,?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, DEFAULT_ADMIN_USERNAME);
+            ps.setString(2, DEFAULT_ADMIN_PASSWORD);
+            ps.setString(3, "Admin");
+            ps.setString(4, "APPROVED");
+            ps.executeUpdate();
         }
     }
 }

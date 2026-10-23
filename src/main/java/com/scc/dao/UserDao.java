@@ -1,9 +1,13 @@
 package com.scc.dao;
 
 import com.scc.model.User;
+
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDao {
+
     public void register(User user) throws SQLException {
         // Prevent duplicate usernames
         String checkSql = "SELECT COUNT(*) FROM Users WHERE username=?";
@@ -35,20 +39,45 @@ public class UserDao {
             stmt.setString(2, passwordHash);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return new User(
-                        rs.getInt("user_id"),
-                        rs.getString("username"),
-                        rs.getString("password_hash"),
-                        rs.getString("role"),
-                        rs.getString("status")
-                );
+                return mapUser(rs);
             }
         }
         return null;
     }
 
+    /** Returns all registered accounts regardless of role. */
+    public List<User> getAllUsers() throws SQLException {
+        String sql = "SELECT user_id, username, password_hash, role, status FROM Users ORDER BY user_id";
+        List<User> users = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                users.add(mapUser(rs));
+            }
+        }
+        return users;
+    }
+
+    /** Returns all accounts with status = 'PENDING' across every role. */
+    public List<User> getPendingUsers() throws SQLException {
+        String sql = "SELECT user_id, username, password_hash, role, status FROM Users WHERE status = ? ORDER BY user_id";
+        List<User> users = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "PENDING");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    users.add(mapUser(rs));
+                }
+            }
+        }
+        return users;
+    }
+
+    /** Updates a user's status from PENDING to APPROVED. */
     public void approveUser(int userId) throws SQLException {
-        String sql = "UPDATE Users SET status='APPROVED' WHERE user_id=?";
+        String sql = "UPDATE Users SET status = 'APPROVED' WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
@@ -56,19 +85,14 @@ public class UserDao {
         }
     }
 
-    public void listPendingUsers() throws SQLException {
-        String sql = "SELECT user_id, username, role, status FROM Users WHERE status='PENDING'";
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            System.out.println("=== Pending Users ===");
-            while (rs.next()) {
-                System.out.printf("ID: %d | Username: %s | Role: %s | Status: %s%n",
-                        rs.getInt("user_id"),
-                        rs.getString("username"),
-                        rs.getString("role"),
-                        rs.getString("status"));
-            }
-        }
+    // Converts one database row into a User record
+    private User mapUser(ResultSet rs) throws SQLException {
+        return new User(
+                rs.getInt("user_id"),
+                rs.getString("username"),
+                rs.getString("password_hash"),
+                rs.getString("role"),
+                rs.getString("status")
+        );
     }
 }
