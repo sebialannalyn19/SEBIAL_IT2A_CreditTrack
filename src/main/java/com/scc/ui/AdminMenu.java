@@ -4,8 +4,14 @@ import com.scc.dao.UserDao;
 import java.util.Scanner;
 
 public class AdminMenu {
-    private final Scanner scanner = new Scanner(System.in);
-    private final UserDao userDao = new UserDao();
+    private final Scanner scanner;
+    private final UserDao userDao;
+
+    // Shared instances are passed in (no new Scanner / UserDao here)
+    public AdminMenu(UserDao userDao, Scanner scanner) {
+        this.userDao = userDao;
+        this.scanner = scanner;
+    }
 
     public void start() {
         while (true) {
@@ -20,7 +26,7 @@ public class AdminMenu {
                 case 1 -> viewPending();
                 case 2 -> approveUser();
                 case 3 -> { System.out.println("Logging out..."); return; }
-                default -> System.out.println("Invalid choice. Please enter 1–3.");
+                default -> System.out.println("Invalid choice. Please enter 1-3.");
             }
         }
     }
