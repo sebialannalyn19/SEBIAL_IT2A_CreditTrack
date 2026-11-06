@@ -25,8 +25,8 @@ public class UserDao {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, user.username());
             stmt.setString(2, user.passwordHash());
-            stmt.setString(3, user.role());
-            stmt.setString(4, user.status());
+            stmt.setString(3, user.role().toUpperCase());
+            stmt.setString(4, user.status().toUpperCase());
             stmt.executeUpdate();
         }
     }
@@ -81,6 +81,18 @@ public class UserDao {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /** Updates a user's role and status, converting them to uppercase. */
+    public void updateUserRoleAndStatus(int userId, String newRole, String newStatus) throws SQLException {
+        String sql = "UPDATE Users SET role = ?, status = ? WHERE user_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newRole.toUpperCase());
+            stmt.setString(2, newStatus.toUpperCase());
+            stmt.setInt(3, userId);
             stmt.executeUpdate();
         }
     }

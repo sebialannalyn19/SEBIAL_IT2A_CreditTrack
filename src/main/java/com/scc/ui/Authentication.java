@@ -6,8 +6,8 @@ import com.scc.model.User;
 import java.util.Scanner;
 
 /**
- * Handles registration, login, and role-based routing.
- * Receives shared UserDao and Scanner instances (no duplicates created).
+ * - Handles registration, login, and role-based routing.
+ * - Receives shared UserDao and Scanner instances (no duplicates created).
  */
 public class Authentication {
     private final UserDao userDao;
@@ -75,7 +75,7 @@ public class Authentication {
 
     private void routeByRole(User user) {
         switch (user.role().toLowerCase()) {
-            case "admin" -> new AdminMenu(userDao, scanner).start();
+            case "admin" -> new AdminMenu(userDao, scanner, user).start();
             case "cashier" -> new CashierMenu(scanner).start(user);
             case "customer" -> new CustomerMenu(scanner).start(user);
             default -> System.out.println("Unknown role: " + user.role());
