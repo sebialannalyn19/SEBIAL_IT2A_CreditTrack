@@ -1,17 +1,15 @@
 package com.scc.ui;
 
+import com.scc.dao.ActivityLogDao;
 import com.scc.dao.UserDao;
 import com.scc.model.User;
 
 import java.util.Scanner;
 
-/**
- * - Handles registration, login, and role-based routing.
- * - Receives shared UserDao and Scanner instances (no duplicates created).
- */
 public class Authentication {
     private final UserDao userDao;
     private final Scanner scanner;
+    private final ActivityLogDao activityLogDao = new ActivityLogDao();
 
     public Authentication(UserDao userDao, Scanner scanner) {
         this.userDao = userDao;
@@ -63,11 +61,15 @@ public class Authentication {
                 return;
             }
             if (!user.status().equalsIgnoreCase("APPROVED")) {
-                System.out.println("Your account is still pending approval by the Admin.");
+                System.out.println("Invalid login: Your account status is PENDING. You cannot log in until approved by Admin.");
                 return;
             }
+
+            activityLogDao.logAction(user.userId(), "User " + user.username() + " (ID: " + user.userId() + ") logged in.");
             System.out.println("Welcome, " + user.username() + " (" + user.role() + ")");
             routeByRole(user);
+
+            activityLogDao.logAction(user.userId(), "User " + user.username() + " (ID: " + user.userId() + ") logged out.");
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -82,7 +84,6 @@ public class Authentication {
         }
     }
 
-    // === Validation Helpers ===
     private String readNonEmpty(String prompt) {
         String input;
         do {

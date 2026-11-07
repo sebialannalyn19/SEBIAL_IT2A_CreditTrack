@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDao {
+    private final ActivityLogDao activityLogDao = new ActivityLogDao();
 
     public void register(User user) throws SQLException {
-        // Prevent duplicate usernames
         String checkSql = "SELECT COUNT(*) FROM Users WHERE username=?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
@@ -45,7 +45,6 @@ public class UserDao {
         return null;
     }
 
-    /** Returns all registered accounts regardless of role. */
     public List<User> getAllUsers() throws SQLException {
         String sql = "SELECT user_id, username, password_hash, role, status FROM Users ORDER BY user_id";
         List<User> users = new ArrayList<>();
@@ -59,7 +58,6 @@ public class UserDao {
         return users;
     }
 
-    /** Returns all accounts with status = 'PENDING' across every role. */
     public List<User> getPendingUsers() throws SQLException {
         String sql = "SELECT user_id, username, password_hash, role, status FROM Users WHERE status = ? ORDER BY user_id";
         List<User> users = new ArrayList<>();
@@ -75,29 +73,28 @@ public class UserDao {
         return users;
     }
 
-    /** Updates a user's status from PENDING to APPROVED. */
-    public void approveUser(int userId) throws SQLException {
+    public void approveUser(int targetUserId, int adminUserId) throws SQLException {
         String sql = "UPDATE Users SET status = 'APPROVED' WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
+            stmt.setInt(1, targetUserId);
             stmt.executeUpdate();
         }
+        activityLogDao.logAction(adminUserId, "Admin [ID: " + adminUserId + "] approved account for User ID " + targetUserId);
     }
 
-    /** Updates a user's role and status, converting them to uppercase. */
-    public void updateUserRoleAndStatus(int userId, String newRole, String newStatus) throws SQLException {
+    public void updateUserRoleAndStatus(int targetUserId, String newRole, String newStatus, int adminUserId) throws SQLException {
         String sql = "UPDATE Users SET role = ?, status = ? WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, newRole.toUpperCase());
             stmt.setString(2, newStatus.toUpperCase());
-            stmt.setInt(3, userId);
+            stmt.setInt(3, targetUserId);
             stmt.executeUpdate();
         }
+        activityLogDao.logAction(adminUserId, "Admin [ID: " + adminUserId + "] changed role/status of User " + targetUserId + " to " + newRole.toUpperCase() + "/" + newStatus.toUpperCase());
     }
 
-    // Converts one database row into a User record
     private User mapUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("user_id"),
